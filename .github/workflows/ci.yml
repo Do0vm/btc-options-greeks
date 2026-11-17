@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - name: Test
+        run: cargo test --release
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+      - name: Run on the captured chain
+        run: cargo run --release -- data/deribit_btc_2026-11-17.json --expiry 27NOV26 --csv chain_out.csv
+      - name: Run on a live chain from Deribit
+        continue-on-error: true
+        run: |
+          curl -sf "https://www.deribit.com/api/v2/public/get_book_summary_by_currency?currency=BTC&kind=option" > live.json
+          cargo run --release -- live.json
